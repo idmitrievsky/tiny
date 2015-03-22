@@ -28,8 +28,8 @@ private:
   std::string _src;
   std::string _val;
   char _token;
-  std::set<std::string> _kws = { "if",  "else",  "endif", "while",  "endwhile",
-                                 "var", "begin", "end",   "program" };
+  std::set<std::string> _kws = { "if",       "else", "endif", "while",
+                                 "endwhile", "var",  "end" };
   std::stack<long> _stack;
   std::map<std::string, long> _vars;
 
@@ -37,26 +37,22 @@ private:
   void error(std::string err);
   void abort(std::string err);
   void expected(std::string s);
-  void match(char c);
   std::string quote(char c);
   std::string quote(std::string s);
 
   bool isAlpha(char c);
   bool isDigit(char c);
   void getName();
-  size_t getNum();
+  void getNum();
   void emit(std::string s);
   void emitl(std::string s);
-  void program();
   void init();
   void header();
-  void decl();
   void topDecls();
   bool inTable(std::string name);
-  void alloc(std::string name);
+  void alloc();
   void assignment();
   void block();
-  void main();
   void epilog();
   void prolog();
 
@@ -110,34 +106,56 @@ private:
   void doIf();
   void doWhile();
   void skipws();
-  void newl();
 
   void matchString(std::string s) {
     if (_val != s) {
       expected(s);
     }
+    next();
   }
 
   void scan() {
-    getName();
-    if (_kws.find(_val) != _kws.end()) {
-      _token = _val == "else" ? 'l' : _val[0];
-    } else {
-      _token = 'x';
+    if (_token == 'x') {
+      if (_kws.find(_val) != _kws.end()) {
+        _token = _val == "else" ? 'l' : _val[0];
+      } else {
+        _token = 'x';
+      }
     }
   }
 
   void lessOrEq() {
-    match('=');
+    next();
     exp();
     _pm = popCompare() <= 0;
   };
 
   void greaterOrEq() {
-    match('=');
+    next();
     exp();
     _pm = popCompare() >= 0;
   }
+
+  void getOp() {
+    skipws();
+    _token = _la;
+    _val.clear();
+    _val.push_back(_la);
+    getChar();
+  }
+
+  void next() {
+    skipws();
+    if (isAlpha(_la)) {
+      getName();
+    } else if (isDigit(_la)) {
+      getNum();
+    } else {
+      getOp();
+    }
+  }
+
+  bool isWs(char c) { return c == ' ' || c == '\t' || c == '\n'; }
 };
 }
 

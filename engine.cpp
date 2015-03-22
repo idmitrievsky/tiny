@@ -29,16 +29,6 @@ void engine::abort(std::string err) {
 
 void engine::expected(std::string s) { abort("Expected: " + s + "\n"); }
 
-void engine::match(char c) {
-  newl();
-  if (_la == c) {
-    getChar();
-  } else {
-    expected(quote(c));
-  }
-  skipws();
-}
-
 std::string engine::quote(char c) {
   std::string s = { '\'', c, '\'' };
   return s;
@@ -53,29 +43,29 @@ bool engine::isAlpha(char c) {
 bool engine::isDigit(char c) { return '0' <= c && c <= '9'; }
 
 void engine::getName() {
-  newl();
+  skipws();
   if (!isAlpha(_la)) {
-    expected("Name");
+    expected("Identifier");
   }
   _val.clear();
-  while (isAlpha(_la)) {
+  _token = 'x';
+  do {
     _val.push_back(_la);
     getChar();
-  }
-  skipws();
+  } while (isAlpha(_la));
 }
 
-size_t engine::getNum() {
-  size_t num = 0;
-  newl();
+void engine::getNum() {
+  skipws();
   if (!isDigit(_la)) {
-    expected("Int");
+    expected("Number");
   }
-  while (isDigit(_la)) {
-    num = 10 * num + (_la - '0');
+  _token = '#';
+  _val.clear();
+  do {
+    _val.push_back(_la);
     getChar();
-  }
-  return num;
+  } while (isDigit(_la));
 }
 
 void engine::emit(std::string s) { fmt::printf("\t%s", s); }
@@ -84,50 +74,32 @@ void engine::emitl(std::string s) { fmt::printf("\t%s\n", s); }
 
 void engine::run() {
   init();
-  program();
-}
-
-void engine::program() {
   matchString("program");
   header();
   topDecls();
-  main();
-  match('.');
+  next();
+  matchString("begin");
+  prolog();
+  block();
+  matchString("end");
+  epilog();
 }
 
 void engine::init() {
   _idx = 0;
-  for (char c = 'a'; c <= 'z'; ++c) {
-    //    _st[c] = "";
-  }
-  for (char c = 'A'; c <= 'Z'; ++c) {
-    //    _st[c] = "";
-  }
   getChar();
-  scan();
+  next();
 }
 
 void engine::header() { emitl("#####"); }
 
-void engine::decl() {
-  getName();
-  alloc(_val);
-  skipws();
-  while (_la == ',') {
-    getChar();
-    getName();
-    alloc(_val);
-    skipws();
-  }
-}
-
 void engine::topDecls() {
   scan();
-  while (_token != 'b') {
-    if (_token == 'v') {
-      decl();
-    } else {
-      abort("Unrecognized Keyword: " + _val);
+  while (_token == 'v') {
+    alloc();
+    next();
+    while (_token == ',') {
+      alloc();
     }
     scan();
   }
@@ -141,19 +113,29 @@ bool engine::inTable(std::string name) {
   return false;
 }
 
-void engine::alloc(std::string name) {
-  if (inTable(name)) {
-    abort("Duplicate Variable Name " + quote(name));
+void engine::alloc() {
+  next();
+  if (_token != 'x') {
+    expected("Variable");
   }
 
+  if (inTable(_val)) {
+    abort("Duplicate Variable Name " + quote(_val));
+  }
+
+  std::string name = _val;
   int initVal = 1;
-  if (_la == '=') {
-    match('=');
-    if (_la == '-') {
-      match('-');
+  next();
+  if (_token == '=') {
+    matchString("=");
+    if (_token == '-') {
+      matchString("-");
       initVal = -1;
     }
-    initVal *= getNum();
+    if (_token != '#') {
+      expected("Variable");
+    }
+    initVal *= std::stol(_val);
   } else {
     initVal = 0;
   }
@@ -163,7 +145,8 @@ void engine::alloc(std::string name) {
 
 void engine::assignment() {
   std::string name = _val;
-  match('=');
+  next();
+  matchString("=");
   boolExp();
   storePm(name);
 }
@@ -184,14 +167,6 @@ void engine::block() {
     }
     scan();
   }
-}
-
-void engine::main() {
-  matchString("begin");
-  prolog();
-  block();
-  matchString("end");
-  epilog();
 }
 
 void engine::prolog() { emitl("BEGIN MAIN"); }
@@ -262,22 +237,26 @@ void engine::undefined(std::string name) {
 }
 
 void engine::factor() {
-  if (_la == '(') {
-    match('(');
+  if (_token == '(') {
+    matchString("(");
     boolExp();
-    match(')');
-  } else if (isAlpha(_la)) {
-    getName();
-    loadVar(_val);
+    matchString(")");
   } else {
-    loadVal(getNum());
+    if (_token == 'x') {
+      loadVar(_val);
+    } else if (_token == '#') {
+      loadVal(std::stol(_val));
+    } else {
+      expected("Factor");
+    }
+    next();
   }
 }
 
 void engine::negFactor() {
-  match('-');
-  if (isDigit(_la)) {
-    loadVal(-getNum());
+  next();
+  if (_token == '#') {
+    loadVal(-std::stol(_val));
   } else {
     factor();
     negatePm();
@@ -285,9 +264,9 @@ void engine::negFactor() {
 }
 
 void engine::firstFactor() {
-  switch (_la) {
+  switch (_token) {
     case '+':
-      match('+');
+      next();
       factor();
       break;
     case '-':
@@ -300,22 +279,21 @@ void engine::firstFactor() {
 }
 
 void engine::mul() {
-  match('*');
+  next();
   factor();
   popMul();
 }
 
 void engine::div() {
-  match('/');
+  next();
   factor();
   popDiv();
 }
 
 void engine::termTail() {
-  newl();
-  while (isMulOp(_la)) {
+  while (isMulOp(_token)) {
     pushPm();
-    switch (_la) {
+    switch (_token) {
       case '*':
         mul();
         break;
@@ -325,7 +303,6 @@ void engine::termTail() {
       default:
         break;
     }
-    newl();
   }
 }
 
@@ -340,22 +317,22 @@ void engine::firstTerm() {
 }
 
 void engine::add() {
-  match('+');
+  next();
   term();
   popAdd();
 }
 
 void engine::sub() {
-  match('-');
+  next();
   term();
   popSub();
 }
 
 void engine::exp() {
   firstTerm();
-  while (isAddOp(_la)) {
+  while (isAddOp(_token)) {
     pushPm();
-    switch (_la) {
+    switch (_token) {
       case '+':
         add();
         break;
@@ -374,7 +351,7 @@ bool engine::isMulOp(char op) { return op == '*' || op == '/'; }
 bool engine::isOrOp(char op) { return op == '|' || op == '~'; }
 
 bool engine::isRelOp(char op) {
-  return op == '=' || op == '#' || op == '<' || op == '>';
+  return op == '=' || op == '$' || op == '<' || op == '>';
 }
 
 void engine::complPm() {
@@ -418,20 +395,20 @@ short engine::popCompare() {
 }
 
 void engine::equal() {
-  match('=');
+  next();
   exp();
   _pm = popCompare() == 0;
 }
 
 void engine::notEqual() {
-  match('#');
+  next();
   exp();
   _pm = popCompare() != 0;
 }
 
 void engine::less() {
-  match('<');
-  switch (_la) {
+  next();
+  switch (_token) {
     case '=':
       lessOrEq();
       break;
@@ -443,8 +420,8 @@ void engine::less() {
 }
 
 void engine::greater() {
-  match('>');
-  switch (_la) {
+  next();
+  switch (_token) {
     case '=':
       greaterOrEq();
       break;
@@ -457,13 +434,13 @@ void engine::greater() {
 
 void engine::relation() {
   exp();
-  if (isRelOp(_la)) {
+  if (isRelOp(_token)) {
     pushPm();
-    switch (_la) {
+    switch (_token) {
       case '=':
         equal();
         break;
-      case '#':
+      case '$':
         notEqual();
         break;
       case '<':
@@ -479,8 +456,8 @@ void engine::relation() {
 }
 
 void engine::notFactor() {
-  if (_la == '!') {
-    match('!');
+  if (_token == '!') {
+    next();
     relation();
     complPm();
   } else {
@@ -490,31 +467,31 @@ void engine::notFactor() {
 
 void engine::boolTerm() {
   notFactor();
-  while (_la == '&') {
+  while (_token == '&') {
     pushPm();
-    match('&');
+    next();
     notFactor();
     popAnd();
   }
 }
 
 void engine::boolOr() {
-  match('|');
+  next();
   boolTerm();
   popOr();
 }
 
 void engine::boolXor() {
-  match('~');
+  next();
   boolTerm();
   popXor();
 }
 
 void engine::boolExp() {
   boolTerm();
-  while (isOrOp(_la)) {
+  while (isOrOp(_token)) {
     pushPm();
-    switch (_la) {
+    switch (_token) {
       case '|':
         boolOr();
         break;
@@ -535,12 +512,14 @@ void engine::branchFalse(std::string l) {
 }
 
 void engine::doIf() {
+  next();
   boolExp();
   std::string l1 = "L0";
   std::string l2 = l1;
   branchFalse(l1);
   block();
   if (_token == 'l') {
+    next();
     l2 = "L1";
     branch(l2);
     emitl(l1);
@@ -551,6 +530,7 @@ void engine::doIf() {
 }
 
 void engine::doWhile() {
+  next();
   std::string l1 = "L0";
   std::string l2 = "L1";
   emitl(l1);
@@ -563,16 +543,8 @@ void engine::doWhile() {
 }
 
 void engine::skipws() {
-  while (_la == ' ') {
+  while (isWs(_la)) {
     getChar();
-  }
-}
-
-void engine::newl() {
-  skipws();
-  while (_la == '\n') {
-    getChar();
-    skipws();
   }
 }
 }
