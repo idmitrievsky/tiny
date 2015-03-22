@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Ivan Dmitrievsky. All rights reserved.
 //
 
-#include <iostream>
+#include "format.h"
 #include <fstream>
 
 #include "engine.h"
@@ -19,6 +19,6 @@ int main(int argc, const char* argv[]) {
   }
 
   tiny::engine e(input);
-  std::cout << e._src;
+  e.run();
   return 0;
 }
