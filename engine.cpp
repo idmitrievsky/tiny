@@ -36,6 +36,7 @@ void engine::match(char c) {
   } else {
     expected(quote(c));
   }
+  skipws();
 }
 
 std::string engine::quote(char c) {
@@ -51,15 +52,17 @@ bool engine::isAlpha(char c) {
 
 bool engine::isDigit(char c) { return '0' <= c && c <= '9'; }
 
-char engine::getName() {
-  char name;
+void engine::getName() {
   newl();
   if (!isAlpha(_la)) {
     expected("Name");
   }
-  name = _la;
-  getChar();
-  return name;
+  _val.clear();
+  while (isAlpha(_la)) {
+    _val.push_back(_la);
+    getChar();
+  }
+  skipws();
 }
 
 size_t engine::getNum() {
@@ -85,7 +88,7 @@ void engine::run() {
 }
 
 void engine::program() {
-  match('p');
+  matchString("program");
   header();
   topDecls();
   main();
@@ -94,35 +97,43 @@ void engine::program() {
 
 void engine::init() {
   _idx = 0;
+  for (char c = 'a'; c <= 'z'; ++c) {
+    //    _st[c] = "";
+  }
+  for (char c = 'A'; c <= 'Z'; ++c) {
+    //    _st[c] = "";
+  }
   getChar();
+  scan();
 }
 
 void engine::header() { emitl("#####"); }
 
 void engine::decl() {
-  match('v');
-  alloc(getName());
+  getName();
+  alloc(_val);
   skipws();
   while (_la == ',') {
     getChar();
-    alloc(getName());
+    getName();
+    alloc(_val);
     skipws();
   }
 }
 
 void engine::topDecls() {
-  newl();
-  while (_la != 'b') {
-    if (_la == 'v') {
+  scan();
+  while (_token != 'b') {
+    if (_token == 'v') {
       decl();
     } else {
-      abort("Unrecognized Keyword: " + quote(_la));
+      abort("Unrecognized Keyword: " + _val);
     }
-    newl();
+    scan();
   }
 }
 
-bool engine::inTable(char name) {
+bool engine::inTable(std::string name) {
   auto var = _vars.find(name);
   if (var != _vars.end()) {
     return true;
@@ -130,7 +141,7 @@ bool engine::inTable(char name) {
   return false;
 }
 
-void engine::alloc(char name) {
+void engine::alloc(std::string name) {
   if (inTable(name)) {
     abort("Duplicate Variable Name " + quote(name));
   }
@@ -147,20 +158,20 @@ void engine::alloc(char name) {
     initVal = 0;
   }
   _vars.insert({ name, initVal });
-  fmt::printf("Allocate variable '%c' with %d\n", name, initVal);
+  fmt::printf("Allocate variable '%s' with %d\n", name, initVal);
 }
 
 void engine::assignment() {
-  char name = getName();
+  std::string name = _val;
   match('=');
   boolExp();
   storePm(name);
 }
 
 void engine::block() {
-  newl();
-  while (_la != 'e' && _la != '$') {
-    switch (_la) {
+  scan();
+  while (_token != 'e' && _token != 'l') {
+    switch (_token) {
       case 'i':
         doIf();
         break;
@@ -171,15 +182,15 @@ void engine::block() {
         assignment();
         break;
     }
-    newl();
+    scan();
   }
 }
 
 void engine::main() {
-  match('b');
+  matchString("begin");
   prolog();
   block();
-  match('e');
+  matchString("end");
   epilog();
 }
 
@@ -201,7 +212,7 @@ void engine::loadVal(long val) {
   _pm = val;
 }
 
-void engine::loadVar(char name) {
+void engine::loadVar(std::string name) {
   if (!inTable(name)) {
     undefined(name);
   }
@@ -238,7 +249,7 @@ void engine::popDiv() {
   _stack.pop();
 }
 
-void engine::storePm(char name) {
+void engine::storePm(std::string name) {
   if (!inTable(name)) {
     undefined(name);
   }
@@ -246,7 +257,7 @@ void engine::storePm(char name) {
   _vars[name] = _pm;
 }
 
-void engine::undefined(char name) {
+void engine::undefined(std::string name) {
   abort("Undefined Identifier " + quote(name));
 }
 
@@ -256,7 +267,8 @@ void engine::factor() {
     boolExp();
     match(')');
   } else if (isAlpha(_la)) {
-    loadVar(getName());
+    getName();
+    loadVar(_val);
   } else {
     loadVal(getNum());
   }
@@ -419,14 +431,28 @@ void engine::notEqual() {
 
 void engine::less() {
   match('<');
-  exp();
-  _pm = popCompare() == -1;
+  switch (_la) {
+    case '=':
+      lessOrEq();
+      break;
+    default:
+      exp();
+      _pm = popCompare() == -1;
+      break;
+  }
 }
 
 void engine::greater() {
   match('>');
-  exp();
-  _pm = popCompare() == 1;
+  switch (_la) {
+    case '=':
+      greaterOrEq();
+      break;
+    default:
+      exp();
+      _pm = popCompare() == 1;
+      break;
+  }
 }
 
 void engine::relation() {
@@ -509,32 +535,29 @@ void engine::branchFalse(std::string l) {
 }
 
 void engine::doIf() {
-  match('i');
   boolExp();
   std::string l1 = "L0";
   std::string l2 = l1;
   branchFalse(l1);
   block();
-  if (_la == '$') {
-    match('$');
+  if (_token == 'l') {
     l2 = "L1";
     branch(l2);
     emitl(l1);
     block();
   }
   emitl(l2);
-  match('e');
+  matchString("endif");
 }
 
 void engine::doWhile() {
-  match('w');
   std::string l1 = "L0";
   std::string l2 = "L1";
   emitl(l1);
   boolExp();
   branchFalse(l2);
   block();
-  match('e');
+  matchString("endwhile");
   branch(l1);
   emitl(l2);
 }

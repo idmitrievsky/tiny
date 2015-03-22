@@ -11,6 +11,7 @@
 
 #include <fstream>
 #include <map>
+#include <set>
 #include <stack>
 #include <string>
 
@@ -25,8 +26,12 @@ private:
   char _la;
   long _pm;
   std::string _src;
+  std::string _val;
+  char _token;
+  std::set<std::string> _kws = { "if",  "else",  "endif", "while",  "endwhile",
+                                 "var", "begin", "end",   "program" };
   std::stack<long> _stack;
-  std::map<char, long> _vars;
+  std::map<std::string, long> _vars;
 
   void getChar();
   void error(std::string err);
@@ -38,7 +43,7 @@ private:
 
   bool isAlpha(char c);
   bool isDigit(char c);
-  char getName();
+  void getName();
   size_t getNum();
   void emit(std::string s);
   void emitl(std::string s);
@@ -47,8 +52,8 @@ private:
   void header();
   void decl();
   void topDecls();
-  bool inTable(char name);
-  void alloc(char name);
+  bool inTable(std::string name);
+  void alloc(std::string name);
   void assignment();
   void block();
   void main();
@@ -58,14 +63,14 @@ private:
   void clearPm();
   void negatePm();
   void loadVal(long val);
-  void undefined(char name);
-  void loadVar(char name);
+  void undefined(std::string name);
+  void loadVar(std::string name);
   void pushPm();
   void popAdd();
   void popSub();
   void popMul();
   void popDiv();
-  void storePm(char name);
+  void storePm(std::string name);
 
   bool isAddOp(char op);
   bool isMulOp(char op);
@@ -106,6 +111,33 @@ private:
   void doWhile();
   void skipws();
   void newl();
+
+  void matchString(std::string s) {
+    if (_val != s) {
+      expected(s);
+    }
+  }
+
+  void scan() {
+    getName();
+    if (_kws.find(_val) != _kws.end()) {
+      _token = _val == "else" ? 'l' : _val[0];
+    } else {
+      _token = 'x';
+    }
+  }
+
+  void lessOrEq() {
+    match('=');
+    exp();
+    _pm = popCompare() <= 0;
+  };
+
+  void greaterOrEq() {
+    match('=');
+    exp();
+    _pm = popCompare() >= 0;
+  }
 };
 }
 
