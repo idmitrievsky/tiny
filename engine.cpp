@@ -79,22 +79,10 @@ void engine::topDecls() {
   }
 }
 
-bool engine::inTable(std::string name) {
-  auto var = _vars.find(name);
-  if (var != _vars.end()) {
-    return true;
-  }
-  return false;
-}
-
 void engine::alloc() {
   next();
   if (_token != 'x') {
     utils::expected("Variable", false);
-  }
-
-  if (inTable(_val)) {
-    utils::abortDuplicate(_val);
   }
 
   std::string name = _val;
@@ -113,7 +101,7 @@ void engine::alloc() {
   } else {
     initVal = 0;
   }
-  _vars.insert({ name, initVal });
+  _ctx.regVar(name, initVal);
 }
 
 void engine::assignment() {
@@ -161,11 +149,8 @@ void engine::loadVal(long val) {
 }
 
 void engine::loadVar(std::string name) {
-  if (!inTable(name)) {
-    utils::undefined(name);
-  }
+  _pm = _ctx.getVal(name);
   utils::loadedVar(name, _pm);
-  _pm = _vars[name];
 }
 
 void engine::pushPm() {
@@ -198,11 +183,8 @@ void engine::popDiv() {
 }
 
 void engine::storePm(std::string name) {
-  if (!inTable(name)) {
-    utils::undefined(name);
-  }
+  _ctx.setVal(name, _pm);
   utils::storedVar(name, _pm);
-  _vars[name] = _pm;
 }
 
 void engine::factor() {

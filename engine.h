@@ -15,6 +15,8 @@
 #include <stack>
 #include <string>
 
+#include "context.h"
+
 namespace tiny {
 class engine {
 public:
@@ -31,7 +33,7 @@ private:
   std::set<std::string> _kws = { "if",       "else", "endif", "while",
                                  "endwhile", "var",  "end" };
   std::stack<long> _stack;
-  std::map<std::string, long> _vars;
+  context _ctx;
 
   void getChar();
 
@@ -40,7 +42,6 @@ private:
   void init();
   void header();
   void topDecls();
-  bool inTable(std::string name);
   void alloc();
   void assignment();
   void block();
