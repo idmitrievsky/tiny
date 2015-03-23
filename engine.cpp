@@ -50,8 +50,7 @@ void engine::run() {
   init();
   matchString("program");
   header();
-  topDecls();
-  next();
+  decl();
   matchString("begin");
   prolog();
   block();
@@ -67,11 +66,10 @@ void engine::init() {
 
 void engine::header() { utils::emitl("#####"); }
 
-void engine::topDecls() {
+void engine::decl() {
   scan();
   while (_token == 'v') {
     alloc();
-    next();
     while (_token == ',') {
       alloc();
     }
@@ -81,6 +79,7 @@ void engine::topDecls() {
 
 void engine::alloc() {
   next();
+  scan();
   if (_token != 'x') {
     utils::expected("Variable", false);
   }
@@ -94,14 +93,19 @@ void engine::alloc() {
       matchString("-");
       initVal = -1;
     }
-    if (_token != '#') {
-      utils::expected("Variable", false);
+    if (_token == '#') {
+      initVal *= std::stol(_val);
+    } else if (_token == 'x') {
+      initVal *= _ctx.getVal(_val);
+    } else {
+      utils::expected("Value", false);
     }
-    initVal *= std::stol(_val);
+    next();
   } else {
     initVal = 0;
   }
   _ctx.regVar(name, initVal);
+  utils::allocated(name, initVal);
 }
 
 void engine::assignment() {

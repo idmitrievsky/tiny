@@ -36,12 +36,11 @@ private:
   context _ctx;
 
   void getChar();
-
   void getName();
   void getNum();
   void init();
   void header();
-  void topDecls();
+  void decl();
   void alloc();
   void assignment();
   void block();
@@ -85,6 +84,8 @@ private:
   void notEqual();
   void less();
   void greater();
+  void lessOrEq();
+  void greaterOrEq();
   void relation();
   void notFactor();
   void boolTerm();
@@ -98,10 +99,6 @@ private:
 
   void matchString(std::string s);
   void scan();
-
-  void lessOrEq();
-
-  void greaterOrEq();
   void getOp();
   void next();
 };
