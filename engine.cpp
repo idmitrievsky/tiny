@@ -7,7 +7,7 @@
 //
 
 #include "engine.h"
-#include "format.h"
+#include "utils.h"
 
 #include <streambuf>
 
@@ -20,57 +20,31 @@ engine::engine(std::fstream &src)
 
 void engine::getChar() { _la = _src[_idx++]; }
 
-void engine::error(std::string err) { fmt::printf("%s\n", err); }
-
-void engine::abort(std::string err) {
-  fmt::printf("%s\n", err);
-  exit(EXIT_FAILURE);
-}
-
-void engine::expected(std::string s) { abort("Expected: " + s + "\n"); }
-
-std::string engine::quote(char c) {
-  std::string s = { '\'', c, '\'' };
-  return s;
-}
-
-std::string engine::quote(std::string s) { return "'" + s + "'"; }
-
-bool engine::isAlpha(char c) {
-  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
-}
-
-bool engine::isDigit(char c) { return '0' <= c && c <= '9'; }
-
 void engine::getName() {
   skipws();
-  if (!isAlpha(_la)) {
-    expected("Identifier");
+  if (!utils::isAlpha(_la)) {
+    utils::expected("Identifier", false);
   }
   _val.clear();
   _token = 'x';
   do {
     _val.push_back(_la);
     getChar();
-  } while (isAlpha(_la));
+  } while (utils::isAlpha(_la));
 }
 
 void engine::getNum() {
   skipws();
-  if (!isDigit(_la)) {
-    expected("Number");
+  if (!utils::isDigit(_la)) {
+    utils::expected("Number", false);
   }
   _token = '#';
   _val.clear();
   do {
     _val.push_back(_la);
     getChar();
-  } while (isDigit(_la));
+  } while (utils::isDigit(_la));
 }
-
-void engine::emit(std::string s) { fmt::printf("\t%s", s); }
-
-void engine::emitl(std::string s) { fmt::printf("\t%s\n", s); }
 
 void engine::run() {
   init();
@@ -91,7 +65,7 @@ void engine::init() {
   next();
 }
 
-void engine::header() { emitl("#####"); }
+void engine::header() { utils::emitl("#####"); }
 
 void engine::topDecls() {
   scan();
@@ -116,11 +90,11 @@ bool engine::inTable(std::string name) {
 void engine::alloc() {
   next();
   if (_token != 'x') {
-    expected("Variable");
+    utils::expected("Variable", false);
   }
 
   if (inTable(_val)) {
-    abort("Duplicate Variable Name " + quote(_val));
+    utils::abortDuplicate(_val);
   }
 
   std::string name = _val;
@@ -133,14 +107,13 @@ void engine::alloc() {
       initVal = -1;
     }
     if (_token != '#') {
-      expected("Variable");
+      utils::expected("Variable", false);
     }
     initVal *= std::stol(_val);
   } else {
     initVal = 0;
   }
   _vars.insert({ name, initVal });
-  fmt::printf("Allocate variable '%s' with %d\n", name, initVal);
 }
 
 void engine::assignment() {
@@ -169,71 +142,67 @@ void engine::block() {
   }
 }
 
-void engine::prolog() { emitl("BEGIN MAIN"); }
+void engine::prolog() { utils::emitl("BEGIN MAIN"); }
 
-void engine::epilog() { emitl("END MAIN"); }
+void engine::epilog() { utils::emitl("END MAIN"); }
 
 void engine::clearPm() {
-  emitl("CLEAR PM");
+  utils::emitl("CLEAR PM");
   _pm = 0;
 }
 void engine::negatePm() {
-  emitl("NEGATE PM");
+  utils::emitl("NEGATE PM");
   _pm *= -1;
 }
 
 void engine::loadVal(long val) {
-  emitl("LOAD VAL PM: " + std::to_string(val));
+  utils::emitl("LOAD VAL PM: " + std::to_string(val));
   _pm = val;
 }
 
 void engine::loadVar(std::string name) {
   if (!inTable(name)) {
-    undefined(name);
+    utils::undefined(name);
   }
-  emitl("LOAD VAR PM: " + quote(name));
+  utils::loadedVar(name, _pm);
   _pm = _vars[name];
 }
 
 void engine::pushPm() {
-  emitl("PUSH PM");
+  utils::emitl("PUSH PM");
   _stack.push(_pm);
 }
 
 void engine::popAdd() {
-  emitl("POP ADD");
+  utils::emitl("POP ADD");
   _pm += _stack.top();
   _stack.pop();
 }
 
 void engine::popSub() {
-  emitl("POP SUB");
+  utils::emitl("POP SUB");
   _pm = _stack.top() - _pm;
   _stack.pop();
 }
 
 void engine::popMul() {
-  emitl("POP MUL");
+  utils::emitl("POP MUL");
   _pm *= _stack.top();
   _stack.pop();
 }
 
 void engine::popDiv() {
-  emitl("POP DIV");
+  utils::emitl("POP DIV");
   _pm = _stack.top() / _pm;
   _stack.pop();
 }
 
 void engine::storePm(std::string name) {
   if (!inTable(name)) {
-    undefined(name);
+    utils::undefined(name);
   }
-  emitl("STORE PM: " + quote(name) + ", " + std::to_string(_pm));
+  utils::storedVar(name, _pm);
   _vars[name] = _pm;
-}
-
-void engine::undefined(std::string name) {
-  abort("Undefined Identifier " + quote(name));
 }
 
 void engine::factor() {
@@ -247,7 +216,7 @@ void engine::factor() {
     } else if (_token == '#') {
       loadVal(std::stol(_val));
     } else {
-      expected("Factor");
+      utils::expected("Factor", false);
     }
     next();
   }
@@ -355,30 +324,30 @@ bool engine::isRelOp(char op) {
 }
 
 void engine::complPm() {
-  emitl("COMPLEMENT PM");
+  utils::emitl("COMPLEMENT PM");
   _pm = ~_pm;
 }
 
 void engine::popAnd() {
-  emitl("POP AND");
+  utils::emitl("POP AND");
   _pm &= _stack.top();
   _stack.pop();
 }
 
 void engine::popOr() {
-  emitl("POP OR");
+  utils::emitl("POP OR");
   _pm |= _stack.top();
   _stack.pop();
 }
 
 void engine::popXor() {
-  emitl("POP XOR");
+  utils::emitl("POP XOR");
   _pm ^= _stack.top();
   _stack.pop();
 }
 
 short engine::popCompare() {
-  emitl("POP CMP");
+  utils::emitl("POP CMP");
   short rel = 0;
 
   if (_pm == _stack.top()) {
@@ -504,11 +473,11 @@ void engine::boolExp() {
   }
 }
 
-void engine::branch(std::string l) { emitl("BRA" + l); }
+void engine::branch(std::string l) { utils::emitl("BRA" + l); }
 
 void engine::branchFalse(std::string l) {
-  emitl("TST D0");
-  emitl("BEQ" + l);
+  utils::emitl("TST D0");
+  utils::emitl("BEQ" + l);
 }
 
 void engine::doIf() {
@@ -522,10 +491,10 @@ void engine::doIf() {
     next();
     l2 = "L1";
     branch(l2);
-    emitl(l1);
+    utils::emitl(l1);
     block();
   }
-  emitl(l2);
+  utils::emitl(l2);
   matchString("endif");
 }
 
@@ -533,18 +502,66 @@ void engine::doWhile() {
   next();
   std::string l1 = "L0";
   std::string l2 = "L1";
-  emitl(l1);
+  utils::emitl(l1);
   boolExp();
   branchFalse(l2);
   block();
   matchString("endwhile");
   branch(l1);
-  emitl(l2);
+  utils::emitl(l2);
 }
 
 void engine::skipws() {
-  while (isWs(_la)) {
+  while (utils::isWs(_la)) {
     getChar();
+  }
+}
+
+void engine::matchString(std::string s) {
+  if (_val != s) {
+    utils::expected(s);
+  }
+  next();
+}
+
+void engine::scan() {
+  if (_token == 'x') {
+    if (_kws.find(_val) != _kws.end()) {
+      _token = _val == "else" ? 'l' : _val[0];
+    } else {
+      _token = 'x';
+    }
+  }
+}
+
+void engine::lessOrEq() {
+  next();
+  exp();
+  _pm = popCompare() <= 0;
+};
+
+void engine::greaterOrEq() {
+  next();
+  exp();
+  _pm = popCompare() >= 0;
+}
+
+void engine::getOp() {
+  skipws();
+  _token = _la;
+  _val.clear();
+  _val.push_back(_la);
+  getChar();
+}
+
+void engine::next() {
+  skipws();
+  if (utils::utils::isAlpha(_la)) {
+    getName();
+  } else if (utils::utils::isDigit(_la)) {
+    getNum();
+  } else {
+    getOp();
   }
 }
 }

@@ -34,18 +34,9 @@ private:
   std::map<std::string, long> _vars;
 
   void getChar();
-  void error(std::string err);
-  void abort(std::string err);
-  void expected(std::string s);
-  std::string quote(char c);
-  std::string quote(std::string s);
 
-  bool isAlpha(char c);
-  bool isDigit(char c);
   void getName();
   void getNum();
-  void emit(std::string s);
-  void emitl(std::string s);
   void init();
   void header();
   void topDecls();
@@ -59,7 +50,6 @@ private:
   void clearPm();
   void negatePm();
   void loadVal(long val);
-  void undefined(std::string name);
   void loadVar(std::string name);
   void pushPm();
   void popAdd();
@@ -107,55 +97,14 @@ private:
   void doWhile();
   void skipws();
 
-  void matchString(std::string s) {
-    if (_val != s) {
-      expected(s);
-    }
-    next();
-  }
+  void matchString(std::string s);
+  void scan();
 
-  void scan() {
-    if (_token == 'x') {
-      if (_kws.find(_val) != _kws.end()) {
-        _token = _val == "else" ? 'l' : _val[0];
-      } else {
-        _token = 'x';
-      }
-    }
-  }
+  void lessOrEq();
 
-  void lessOrEq() {
-    next();
-    exp();
-    _pm = popCompare() <= 0;
-  };
-
-  void greaterOrEq() {
-    next();
-    exp();
-    _pm = popCompare() >= 0;
-  }
-
-  void getOp() {
-    skipws();
-    _token = _la;
-    _val.clear();
-    _val.push_back(_la);
-    getChar();
-  }
-
-  void next() {
-    skipws();
-    if (isAlpha(_la)) {
-      getName();
-    } else if (isDigit(_la)) {
-      getNum();
-    } else {
-      getOp();
-    }
-  }
-
-  bool isWs(char c) { return c == ' ' || c == '\t' || c == '\n'; }
+  void greaterOrEq();
+  void getOp();
+  void next();
 };
 }
 
