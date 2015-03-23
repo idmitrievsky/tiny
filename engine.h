@@ -91,8 +91,6 @@ private:
   void boolXor();
   void boolExp();
 
-  void branch(std::string l);
-  void branchFalse(std::string l);
   void doIf();
   void doWhile();
   void skipws();

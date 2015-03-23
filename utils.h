@@ -25,6 +25,8 @@ public:
   static void allocated(std::string var, long val);
   static void loadedVar(std::string var, long val);
   static void storedVar(std::string var, long val);
+  static void branch(std::string l);
+  static void branchFalse(std::string l);
 
   static bool isAlpha(char c);
   static bool isDigit(char c);

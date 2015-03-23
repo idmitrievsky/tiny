@@ -473,13 +473,6 @@ void engine::boolExp() {
   }
 }
 
-void engine::branch(std::string l) { utils::emitl("BRA" + l); }
-
-void engine::branchFalse(std::string l) {
-  utils::emitl("TST D0");
-  utils::emitl("BEQ" + l);
-}
-
 void engine::doIf() {
   next();
   boolExp();

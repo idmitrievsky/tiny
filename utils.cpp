@@ -49,6 +49,13 @@ void utils::storedVar(std::string var, long val) {
   emitl("STORE PM: " + quote(var) + ", " + std::to_string(val));
 }
 
+void utils::branch(std::string l) { emitl("BRA " + l); }
+
+void utils::branchFalse(std::string l) {
+  emitl("TST D0");
+  emitl("BEQ" + l);
+}
+
 bool utils::isAlpha(char c) {
   return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
 }
