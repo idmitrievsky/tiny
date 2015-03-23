@@ -9,6 +9,7 @@
 #ifndef __tiny__ast__
 #define __tiny__ast__
 
+#include <assert.h>
 #include <string>
 #include <memory>
 #include <vector>
@@ -26,57 +27,122 @@ class astblock;
 
 class astexp : public ast {
 public:
-  astexp(std::string op, std::shared_ptr<astexp> lexp,
-         std::shared_ptr<astexp> rexp)
-      : _op(op), _lexp(lexp), _rexp(rexp) {}
+  astexp() {}
   virtual long exec(context &ctx) {
+    if (leaf) {
+      return _val;
+    } else if (var) {
+      return ctx.getVal(_varName);
+    }
+
     if (_op == "+") {
-      return _lexp->exec(ctx) + _lexp->_rexp(ctx);
+      return _lexp->exec(ctx) + _rexp->exec(ctx);
+    } else if (_op == "-") {
+      return _lexp->exec(ctx) - _rexp->exec(ctx);
+    } else if (_op == "*") {
+      return _lexp->exec(ctx) * _rexp->exec(ctx);
+    } else if (_op == "/") {
+      return _lexp->exec(ctx) / _rexp->exec(ctx);
+    } else if (_op == "=") {
+      return _lexp->exec(ctx) == _rexp->exec(ctx);
+    } else if (_op == "$") {
+      return _lexp->exec(ctx) != _rexp->exec(ctx);
+    } else if (_op == ">") {
+      return _lexp->exec(ctx) > _rexp->exec(ctx);
+    } else if (_op == ">=") {
+      return _lexp->exec(ctx) >= _rexp->exec(ctx);
+    } else if (_op == "<") {
+      return _lexp->exec(ctx) < _rexp->exec(ctx);
+    } else if (_op == "<=") {
+      return _lexp->exec(ctx) <= _rexp->exec(ctx);
+    } else if (_op == "&") {
+      return _lexp->exec(ctx) & _rexp->exec(ctx);
+    } else if (_op == "|") {
+      return _lexp->exec(ctx) | _rexp->exec(ctx);
+    } else if (_op == "~") {
+      return _lexp->exec(ctx) ^ _rexp->exec(ctx);
+    } else if (_op == "!") {
+      return ~_lexp->exec(ctx);
+    } else if (_op == "@") {
+      return -_lexp->exec(ctx);
+    } else {
+      assert(0);
     }
     return 0;
+  }
+  void addOp(std::string op) { _op = op; }
+  void addLexp(std::shared_ptr<astexp> lexp) { _lexp = lexp; }
+  void addRexp(std::shared_ptr<astexp> rexp) { _rexp = rexp; }
+  void addVal(long val) {
+    _val = val;
+    leaf = true;
+  }
+  void addVar(std::string varName) {
+    _varName = varName;
+    var = true;
+  }
+  long getVal(context &ctx) {
+    assert(leaf || var);
+    if (leaf) {
+      return _val;
+    } else {
+      return ctx.getVal(_varName);
+    }
   }
 
 private:
   std::string _op;
   std::shared_ptr<astexp> _lexp;
   std::shared_ptr<astexp> _rexp;
+  long _val;
+  std::string _varName;
+  bool leaf = false, var = false;
 };
 
 class astassignment : public ast {
 public:
-  astassignment(std::string varName, astexp exp)
-      : _varName(varName), _exp(exp) {}
+  astassignment() {}
   virtual long exec(context &ctx) {
-    long val = _exp.exec(ctx);
+    long val = _exp->exec(ctx);
     ctx.setVal(_varName, val);
     return val;
   }
 
+  void addVar(std::string varName) { _varName = varName; }
+  void addVal(std::shared_ptr<astexp> exp) { _exp = exp; }
+
 private:
   std::string _varName;
-  astexp _exp;
+  std::shared_ptr<astexp> _exp;
 };
 
 class astwhile : public ast {
 public:
-  astwhile(astexp cond, std::shared_ptr<astblock> body)
-      : _cond(cond), _body(body) {}
+  astwhile() {}
   virtual long exec(context &ctx);
 
+  void addCond(std::shared_ptr<astexp> cond) { _cond = cond; }
+
+  void addBody(std::shared_ptr<astblock> body) { _body = body; }
+
 private:
-  astexp _cond;
+  std::shared_ptr<astexp> _cond;
   std::shared_ptr<astblock> _body;
 };
 
 class astif : public ast {
 public:
-  astif(astexp cond, std::shared_ptr<astblock> truth,
-        std::shared_ptr<astblock> otherwise)
-      : _cond(cond), _truth(truth), _otherwise(otherwise) {}
+  astif() {}
   virtual long exec(context &ctx);
 
+  void addCond(std::shared_ptr<astexp> cond) { _cond = cond; }
+
+  void addTrue(std::shared_ptr<astblock> truth) { _truth = truth; }
+
+  void addFalse(std::shared_ptr<astblock> otherwise) { _otherwise = otherwise; }
+
 private:
-  astexp _cond;
+  std::shared_ptr<astexp> _cond;
   std::shared_ptr<astblock> _truth;
   std::shared_ptr<astblock> _otherwise;
 };
@@ -112,20 +178,21 @@ private:
 
 class astprogram : public ast {
 public:
-  astprogram(astblock block) : _block(block) {}
+  astprogram() {}
   virtual long exec(context &ctx) {
     for (astdecl decl : _decls) {
       decl.exec(ctx);
     }
-    _block.exec(ctx);
+    _block->exec(ctx);
     return 0;
   }
 
   void addDecl(astdecl decl) { _decls.push_back(decl); }
+  void addBlock(std::shared_ptr<astblock> block) { _block = block; }
 
 private:
   std::vector<astdecl> _decls;
-  astblock _block;
+  std::shared_ptr<astblock> _block;
 };
 }
 #endif /* defined(__tiny__ast__) */

@@ -53,8 +53,10 @@ void engine::run() {
   decl();
   matchString("begin");
   prolog();
-  block();
+  _ast.addBlock(block());
   matchString("end");
+  context ctx;
+  _ast.exec(ctx);
   epilog();
 }
 
@@ -105,33 +107,38 @@ void engine::alloc() {
     initVal = 0;
   }
   _ctx.regVar(name, initVal);
+  _ast.addDecl(astdecl(name, initVal));
   utils::allocated(name, initVal);
 }
 
-void engine::assignment() {
+std::shared_ptr<ast> engine::assignment() {
+  auto assignment = std::make_shared<astassignment>();
   std::string name = _val;
+  assignment->addVar(name);
   next();
   matchString("=");
-  boolExp();
-  storePm(name);
+  assignment->addVal(boolExp());
+  return assignment;
 }
 
-void engine::block() {
+std::shared_ptr<astblock> engine::block() {
   scan();
+  auto block = std::make_shared<astblock>();
   while (_token != 'e' && _token != 'l') {
     switch (_token) {
       case 'i':
-        doIf();
+        block->add(doIf());
         break;
       case 'w':
-        doWhile();
+        block->add(doWhile());
         break;
       default:
-        assignment();
+        block->add(assignment());
         break;
     }
     scan();
   }
+  return block;
 }
 
 void engine::prolog() { utils::emitl("BEGIN MAIN"); }
@@ -140,55 +147,68 @@ void engine::epilog() { utils::emitl("END MAIN"); }
 
 void engine::clearPm() {
   utils::emitl("CLEAR PM");
-  _pm = 0;
-}
-void engine::negatePm() {
-  utils::emitl("NEGATE PM");
-  _pm *= -1;
+  _pm = std::make_shared<astexp>();
 }
 
 void engine::loadVal(long val) {
   utils::emitl("LOAD VAL PM: " + std::to_string(val));
-  _pm = val;
+  _pm->addVal(val);
 }
 
 void engine::loadVar(std::string name) {
-  _pm = _ctx.getVal(name);
-  utils::loadedVar(name, _pm);
+  _pm->addVar(name);
+  utils::loadedVar(name, _pm->getVal(_ctx));
 }
 
 void engine::pushPm() {
   utils::emitl("PUSH PM");
   _stack.push(_pm);
+  clearPm();
 }
 
 void engine::popAdd() {
   utils::emitl("POP ADD");
-  _pm += _stack.top();
+  auto op = std::make_shared<astexp>();
+  op->addOp("+");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
+  _pm = op;
 }
 
 void engine::popSub() {
   utils::emitl("POP SUB");
-  _pm = _stack.top() - _pm;
+  auto op = std::make_shared<astexp>();
+  op->addOp("-");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
+  _pm = op;
 }
 
 void engine::popMul() {
   utils::emitl("POP MUL");
-  _pm *= _stack.top();
+  auto op = std::make_shared<astexp>();
+  op->addOp("*");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
+  _pm = op;
 }
 
 void engine::popDiv() {
   utils::emitl("POP DIV");
-  _pm = _stack.top() / _pm;
+  auto op = std::make_shared<astexp>();
+  op->addOp("/");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
+  _pm = op;
 }
 
 void engine::storePm(std::string name) {
-  _ctx.setVal(name, _pm);
-  utils::storedVar(name, _pm);
+  _ctx.setVal(name, _pm->getVal(_ctx));
+  utils::storedVar(name, _pm->getVal(_ctx));
 }
 
 void engine::factor() {
@@ -309,56 +329,72 @@ bool engine::isRelOp(char op) {
   return op == '=' || op == '$' || op == '<' || op == '>';
 }
 
+void engine::negatePm() {
+  utils::emitl("COMPLEMENT PM");
+  auto op = std::make_shared<astexp>();
+  op->addOp("@");
+  op->addLexp(_pm);
+  _pm = op;
+}
+
 void engine::complPm() {
   utils::emitl("COMPLEMENT PM");
-  _pm = ~_pm;
+  auto op = std::make_shared<astexp>();
+  op->addOp("!");
+  op->addLexp(_pm);
+  _pm = op;
 }
 
 void engine::popAnd() {
   utils::emitl("POP AND");
-  _pm &= _stack.top();
+  auto op = std::make_shared<astexp>();
+  op->addOp("&");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
+  _pm = op;
 }
 
 void engine::popOr() {
   utils::emitl("POP OR");
-  _pm |= _stack.top();
+  auto op = std::make_shared<astexp>();
+  op->addOp("|");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
+  _pm = op;
 }
 
 void engine::popXor() {
   utils::emitl("POP XOR");
-  _pm ^= _stack.top();
+  auto op = std::make_shared<astexp>();
+  op->addOp("^");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
   _stack.pop();
-}
-
-short engine::popCompare() {
-  utils::emitl("POP CMP");
-  short rel = 0;
-
-  if (_pm == _stack.top()) {
-    rel = 0;
-  } else if (_stack.top() < _pm) {
-    rel = -1;
-  } else {
-    rel = 1;
-  }
-
-  _stack.pop();
-
-  return rel;
+  _pm = op;
 }
 
 void engine::equal() {
   next();
   exp();
-  _pm = popCompare() == 0;
+  auto op = std::make_shared<astexp>();
+  op->addOp("=");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
+  _stack.pop();
+  _pm = op;
 }
 
 void engine::notEqual() {
   next();
   exp();
-  _pm = popCompare() != 0;
+  auto op = std::make_shared<astexp>();
+  op->addOp("$");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
+  _stack.pop();
+  _pm = op;
 }
 
 void engine::less() {
@@ -369,7 +405,12 @@ void engine::less() {
       break;
     default:
       exp();
-      _pm = popCompare() == -1;
+      auto op = std::make_shared<astexp>();
+      op->addOp("<");
+      op->addLexp(_stack.top());
+      op->addRexp(_pm);
+      _stack.pop();
+      _pm = op;
       break;
   }
 }
@@ -382,7 +423,12 @@ void engine::greater() {
       break;
     default:
       exp();
-      _pm = popCompare() == 1;
+      auto op = std::make_shared<astexp>();
+      op->addOp(">");
+      op->addLexp(_stack.top());
+      op->addRexp(_pm);
+      _stack.pop();
+      _pm = op;
       break;
   }
 }
@@ -442,7 +488,7 @@ void engine::boolXor() {
   popXor();
 }
 
-void engine::boolExp() {
+std::shared_ptr<astexp> engine::boolExp() {
   boolTerm();
   while (isOrOp(_token)) {
     pushPm();
@@ -457,37 +503,44 @@ void engine::boolExp() {
         break;
     }
   }
+  std::shared_ptr<astexp> tmp = _pm;
+  clearPm();
+  return tmp;
 }
 
-void engine::doIf() {
+std::shared_ptr<ast> engine::doIf() {
   next();
-  boolExp();
+  auto ifblock = std::make_shared<astif>();
+  ifblock->addCond(boolExp());
   std::string l1 = "L0";
   std::string l2 = l1;
   utils::branchFalse(l1);
-  block();
+  ifblock->addTrue(block());
   if (_token == 'l') {
     next();
     l2 = "L1";
     utils::branch(l2);
     utils::emitl(l1);
-    block();
+    ifblock->addFalse(block());
   }
   utils::emitl(l2);
   matchString("end");
+  return ifblock;
 }
 
-void engine::doWhile() {
+std::shared_ptr<ast> engine::doWhile() {
   next();
+  auto whileblock = std::make_shared<astwhile>();
   std::string l1 = "L0";
   std::string l2 = "L1";
   utils::emitl(l1);
-  boolExp();
+  whileblock->addCond(boolExp());
   utils::branchFalse(l2);
-  block();
+  whileblock->addBody(block());
   matchString("end");
   utils::branch(l1);
   utils::emitl(l2);
+  return whileblock;
 }
 
 void engine::skipws() {
@@ -516,13 +569,23 @@ void engine::scan() {
 void engine::lessOrEq() {
   next();
   exp();
-  _pm = popCompare() <= 0;
+  auto op = std::make_shared<astexp>();
+  op->addOp("<=");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
+  _stack.pop();
+  _pm = op;
 };
 
 void engine::greaterOrEq() {
   next();
   exp();
-  _pm = popCompare() >= 0;
+  auto op = std::make_shared<astexp>();
+  op->addOp(">=");
+  op->addLexp(_stack.top());
+  op->addRexp(_pm);
+  _stack.pop();
+  _pm = op;
 }
 
 void engine::getOp() {

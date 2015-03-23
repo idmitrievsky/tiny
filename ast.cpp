@@ -11,14 +11,14 @@
 namespace tiny {
 
 long astwhile::exec(context &ctx) {
-  while (_cond.exec(ctx)) {
+  while (_cond->exec(ctx)) {
     _body->exec(ctx);
   }
   return 0;
 }
 
 long astif::exec(context &ctx) {
-  if (_cond.exec(ctx)) {
+  if (_cond->exec(ctx)) {
     _truth->exec(ctx);
   } else {
     _otherwise->exec(ctx);
