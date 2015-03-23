@@ -478,12 +478,12 @@ void engine::doIf() {
   boolExp();
   std::string l1 = "L0";
   std::string l2 = l1;
-  branchFalse(l1);
+  utils::branchFalse(l1);
   block();
   if (_token == 'l') {
     next();
     l2 = "L1";
-    branch(l2);
+    utils::branch(l2);
     utils::emitl(l1);
     block();
   }
@@ -497,10 +497,10 @@ void engine::doWhile() {
   std::string l2 = "L1";
   utils::emitl(l1);
   boolExp();
-  branchFalse(l2);
+  utils::branchFalse(l2);
   block();
   matchString("endwhile");
-  branch(l1);
+  utils::branch(l1);
   utils::emitl(l2);
 }
 
