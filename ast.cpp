@@ -21,7 +21,9 @@ long astif::exec(context &ctx) {
   if (_cond->exec(ctx)) {
     _truth->exec(ctx);
   } else {
-    _otherwise->exec(ctx);
+    if (_otherwise != nullptr) {
+      _otherwise->exec(ctx);
+    }
   }
   return 0;
 }
