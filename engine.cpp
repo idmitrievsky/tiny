@@ -474,7 +474,7 @@ void engine::doIf() {
     block();
   }
   utils::emitl(l2);
-  matchString("endif");
+  matchString("end");
 }
 
 void engine::doWhile() {
@@ -485,7 +485,7 @@ void engine::doWhile() {
   boolExp();
   utils::branchFalse(l2);
   block();
-  matchString("endwhile");
+  matchString("end");
   utils::branch(l1);
   utils::emitl(l2);
 }

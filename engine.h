@@ -30,8 +30,7 @@ private:
   std::string _src;
   std::string _val;
   char _token;
-  std::set<std::string> _kws = { "if",       "else", "endif", "while",
-                                 "endwhile", "var",  "end" };
+  std::set<std::string> _kws = { "if", "else", "while", "var", "end" };
   std::stack<long> _stack;
   context _ctx;
 
