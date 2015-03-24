@@ -214,7 +214,7 @@ void engine::storePm(std::string name) {
 void engine::factor() {
   if (_token == '(') {
     matchString("(");
-    boolExp();
+    _pm = boolExp();
     matchString(")");
   } else {
     if (_token == 'x') {
