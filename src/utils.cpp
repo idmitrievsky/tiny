@@ -38,7 +38,7 @@ void utils::emit(std::string s) { fmt::printf("\t%s", s); }
 void utils::emitl(std::string s) { fmt::printf("\t%s\n", s); }
 
 void utils::allocated(std::string var, long val) {
-  fmt::printf("Allocate variable '%s' with %d\n", var, val);
+  fmt::printf("Allocate variable '%s' with %ld\n", var, val);
 }
 
 void utils::loadedVar(std::string var, long val) {
