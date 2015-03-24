@@ -132,6 +132,9 @@ std::shared_ptr<astblock> engine::block() {
       case 'w':
         block->add(doWhile());
         break;
+      case 'p':
+        block->add(doPrint());
+        break;
       default:
         block->add(assignment());
         break;
@@ -541,6 +544,19 @@ std::shared_ptr<ast> engine::doWhile() {
   utils::branch(l1);
   utils::emitl(l2);
   return whileblock;
+}
+
+std::shared_ptr<ast> engine::doPrint() {
+  next();
+  auto printblock = std::make_shared<astprint>();
+  //  matchString("(");
+  printblock->addExp(boolExp());
+  while (_token == ',') {
+    next();
+    printblock->addExp(boolExp());
+  }
+  //  matchString(")");
+  return printblock;
 }
 
 void engine::skipws() {

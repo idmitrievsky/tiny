@@ -31,7 +31,7 @@ private:
   std::string _src;
   std::string _val;
   char _token;
-  std::set<std::string> _kws = { "if", "else", "while", "var", "end" };
+  std::set<std::string> _kws = { "if", "else", "while", "print", "var", "end" };
   std::stack<std::shared_ptr<astexp> > _stack;
   context _ctx;
   astprogram _ast;
@@ -95,6 +95,7 @@ private:
 
   std::shared_ptr<ast> doIf();
   std::shared_ptr<ast> doWhile();
+  std::shared_ptr<ast> doPrint();
   void skipws();
 
   void matchString(std::string s);
