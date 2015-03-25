@@ -234,6 +234,7 @@ void engine::negFactor() {
   next();
   if (_token == '#') {
     loadVal(-std::stol(_val));
+    next();
   } else {
     factor();
     negatePm();
