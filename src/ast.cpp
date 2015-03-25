@@ -8,6 +8,7 @@
 
 #include "ast.h"
 #include "format.h"
+#include "utils.h"
 
 namespace tiny {
 
@@ -27,7 +28,11 @@ long astexp::exec(context &ctx) {
   } else if (_op == "*") {
     return _lexp->exec(ctx) * _rexp->exec(ctx);
   } else if (_op == "/") {
-    return _lexp->exec(ctx) / _rexp->exec(ctx);
+    long val = _rexp->exec(ctx);
+    if (val == 0) {
+      utils::runtime("Division by zero.");
+    }
+    return _lexp->exec(ctx) / val;
   } else if (_op == "=") {
     return _lexp->exec(ctx) == _rexp->exec(ctx);
   } else if (_op == "$") {

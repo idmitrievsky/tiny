@@ -29,6 +29,8 @@ void utils::expected(std::string s, bool quot) {
   abort("Expected: " + s + "\n");
 }
 
+void utils::runtime(std::string s) { abort("Runtime error: " + s + "\n"); }
+
 void utils::undefined(std::string var) {
   abort("Undefined Identifier " + quote(var));
 }
