@@ -65,7 +65,7 @@ bool utils::isDigit(char c) { return '0' <= c && c <= '9'; }
 bool utils::isWs(char c) { return c == ' ' || c == '\t' || c == '\n'; }
 
 std::string utils::quote(char c) {
-  std::string s = { '\'', c, '\'' };
+  std::string s = {'\'', c, '\''};
   return s;
 }
 

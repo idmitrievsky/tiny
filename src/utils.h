@@ -18,6 +18,7 @@ public:
   static void abort(std::string err);
   static void abortDuplicate(std::string var);
   static void expected(std::string s, bool quote = true);
+  static void runtime(std::string s);
   static void undefined(std::string var);
 
   static void emit(std::string s);

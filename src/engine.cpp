@@ -15,8 +15,7 @@ namespace tiny {
 engine::engine(std::fstream &src)
     : _src(std::string(std::istreambuf_iterator<char>(src),
                        std::istreambuf_iterator<char>())),
-      _la(_src[0]),
-      _idx(1) {}
+      _la(_src[0]), _idx(1) {}
 
 void engine::getChar() { _la = _src[_idx++]; }
 
@@ -126,18 +125,18 @@ std::shared_ptr<astblock> engine::block() {
   auto block = std::make_shared<astblock>();
   while (_token != 'e' && _token != 'l') {
     switch (_token) {
-      case 'i':
-        block->add(doIf());
-        break;
-      case 'w':
-        block->add(doWhile());
-        break;
-      case 'p':
-        block->add(doPrint());
-        break;
-      default:
-        block->add(assignment());
-        break;
+    case 'i':
+      block->add(doIf());
+      break;
+    case 'w':
+      block->add(doWhile());
+      break;
+    case 'p':
+      block->add(doPrint());
+      break;
+    default:
+      block->add(assignment());
+      break;
     }
     scan();
   }
@@ -243,16 +242,16 @@ void engine::negFactor() {
 
 void engine::firstFactor() {
   switch (_token) {
-    case '+':
-      next();
-      factor();
-      break;
-    case '-':
-      negFactor();
-      break;
-    default:
-      factor();
-      break;
+  case '+':
+    next();
+    factor();
+    break;
+  case '-':
+    negFactor();
+    break;
+  default:
+    factor();
+    break;
   }
 }
 
@@ -272,14 +271,14 @@ void engine::termTail() {
   while (isMulOp(_token)) {
     pushPm();
     switch (_token) {
-      case '*':
-        mul();
-        break;
-      case '/':
-        div();
-        break;
-      default:
-        break;
+    case '*':
+      mul();
+      break;
+    case '/':
+      div();
+      break;
+    default:
+      break;
     }
   }
 }
@@ -311,13 +310,13 @@ void engine::exp() {
   while (isAddOp(_token)) {
     pushPm();
     switch (_token) {
-      case '+':
-        add();
-        break;
-      case '-':
-        sub();
-      default:
-        break;
+    case '+':
+      add();
+      break;
+    case '-':
+      sub();
+    default:
+      break;
     }
   }
 }
@@ -403,36 +402,36 @@ void engine::notEqual() {
 void engine::less() {
   next();
   switch (_token) {
-    case '=':
-      lessOrEq();
-      break;
-    default:
-      exp();
-      auto op = std::make_shared<astexp>();
-      op->addOp("<");
-      op->addLexp(_stack.top());
-      op->addRexp(_pm);
-      _stack.pop();
-      _pm = op;
-      break;
+  case '=':
+    lessOrEq();
+    break;
+  default:
+    exp();
+    auto op = std::make_shared<astexp>();
+    op->addOp("<");
+    op->addLexp(_stack.top());
+    op->addRexp(_pm);
+    _stack.pop();
+    _pm = op;
+    break;
   }
 }
 
 void engine::greater() {
   next();
   switch (_token) {
-    case '=':
-      greaterOrEq();
-      break;
-    default:
-      exp();
-      auto op = std::make_shared<astexp>();
-      op->addOp(">");
-      op->addLexp(_stack.top());
-      op->addRexp(_pm);
-      _stack.pop();
-      _pm = op;
-      break;
+  case '=':
+    greaterOrEq();
+    break;
+  default:
+    exp();
+    auto op = std::make_shared<astexp>();
+    op->addOp(">");
+    op->addLexp(_stack.top());
+    op->addRexp(_pm);
+    _stack.pop();
+    _pm = op;
+    break;
   }
 }
 
@@ -441,20 +440,20 @@ void engine::relation() {
   if (isRelOp(_token)) {
     pushPm();
     switch (_token) {
-      case '=':
-        equal();
-        break;
-      case '$':
-        notEqual();
-        break;
-      case '<':
-        less();
-        break;
-      case '>':
-        greater();
-        break;
-      default:
-        break;
+    case '=':
+      equal();
+      break;
+    case '$':
+      notEqual();
+      break;
+    case '<':
+      less();
+      break;
+    case '>':
+      greater();
+      break;
+    default:
+      break;
     }
   }
 }
@@ -496,14 +495,14 @@ std::shared_ptr<astexp> engine::boolExp() {
   while (isOrOp(_token)) {
     pushPm();
     switch (_token) {
-      case '|':
-        boolOr();
-        break;
-      case '~':
-        boolXor();
-        break;
-      default:
-        break;
+    case '|':
+      boolOr();
+      break;
+    case '~':
+      boolXor();
+      break;
+    default:
+      break;
     }
   }
   std::shared_ptr<astexp> tmp = _pm;
