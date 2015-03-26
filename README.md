@@ -6,7 +6,7 @@ C++ implementation of slightly modified TINY language
     decls := {decl}
     decl := `let` var-list
     var-list := var {`,` var}
-    var := ident [= int]
+    var := ident [`=` int]
     
     main := `begin` block `end`
     block := {stmt}
@@ -27,4 +27,10 @@ C++ implementation of slightly modified TINY language
     bool-term := not-factor {andop not-factor}
     not-factor := [`!`] relation
     relation := exp [relop exp]
+    
+    addop := `+` | `-`;
+    mulop := `*` | `/`;
+    orop := `|`;
+    andop := `&`;
+    relop := `<` | `<=` |  `>` | `>=` | `=` | `#`;
     
