@@ -9,16 +9,22 @@
 #include "format.h"
 #include <fstream>
 
-#include "engine.h"
+#include "lexer.h"
+#include "parser.h"
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
   std::fstream input;
 
   if (argc > 1) {
     input.open(argv[1]);
   }
 
-  tiny::engine e(input);
-  e.run();
+  tiny::lex l;
+  tiny::parser p("/Users/ivandmi/Documents/dev/tiny/tiny/grammar.json",
+                 "/Users/ivandmi/Documents/dev/tiny/tiny/table.json");
+
+  auto lst = p.run(l.run(input));
+  p.vis(lst);
+
   return 0;
 }
