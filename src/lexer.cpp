@@ -9,19 +9,13 @@
 #include "format.h"
 #include "lexer.h"
 
-#include <iterator>
-
-template <typename Fn, Fn fn, typename... Args>
-typename std::result_of<Fn(Args...)>::type wrapper(Args &&... args) {
-  return fn(std::forward<Args>(args)...);
-}
-
-#define WRAP(FUNC) wrapper<decltype(&FUNC), &FUNC>
+#include <set>
 
 namespace tiny {
 std::list<token> lex::run(std::fstream &src) {
   _itr = std::istreambuf_iterator<char>(src);
   std::string ops("+-*/(<>)=,");
+  std::set<std::string> keyWords = {"begin", "end", "if", "while", "print"};
   std::list<token> tokens;
 
   getChar();
@@ -29,6 +23,9 @@ std::list<token> lex::run(std::fstream &src) {
     getWs();
     if (isAlpha(_lookAhead) || _lookAhead == '_') {
       tokens.push_back(getWord());
+      if (keyWords.find(tokens.back()._val) != keyWords.end()) {
+        tokens.back()._info._keyWord = true;
+      }
     } else if (isDigit(_lookAhead)) {
       tokens.push_back(getNum());
     } else if (ops.find(_lookAhead) != std::string::npos) {

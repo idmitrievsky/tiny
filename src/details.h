@@ -13,6 +13,7 @@ namespace tiny {
 struct details {
   long _lineNum;
   long _linePos;
+  bool _keyWord = false;
 };
 }
 #endif /* defined(__tiny__details__) */
