@@ -19,11 +19,13 @@ class parser {
 public:
   parser(std::string grammarPath, std::string tablePath);
   std::list<size_t> run(std::list<token>);
-
   void vis(std::list<size_t>);
 
 private:
   grammar _gramm;
+  void _gerror(grammar::lexem l, token t);
+  void _eoferror(grammar::lexem l);
+  void _serror(grammar::lexem l, token t);
 };
 }
 

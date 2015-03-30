@@ -45,15 +45,7 @@ std::list<size_t> parser::run(std::list<token> tokens) {
           token->_val = "num";
           continue;
         }
-        auto exp = _gramm.expected(top._val);
-        std::string err = fmt::sprintf(
-            "Unexpected word %s at %ld:%ld. Expected %s", token->_val,
-            token->_info._lineNum, token->_info._linePos, exp[0]);
-        for (auto it = exp.begin() + 1; it != exp.end(); ++it) {
-          err += ", " + *it;
-        }
-        err += ".\n";
-        fmt::printf("%s", err);
+        _gerror(top, *token);
         return ruleNums;
       }
     } else if (token->_val == top._val) {
@@ -63,21 +55,13 @@ std::list<size_t> parser::run(std::list<token> tokens) {
       s.pop();
       ++token;
     } else {
-      fmt::printf("Unexpected word %s at %ld:%ld. Expected %s.\n", token->_val,
-                  token->_info._lineNum, token->_info._linePos, top._val);
+      _serror(top, *token);
       return ruleNums;
     }
   }
 
   if (!s.empty()) {
-    auto exp = _gramm.expected(s.top()._val);
-    std::string err =
-        fmt::sprintf("Unexpected end of file. Expected %s", exp[0]);
-    for (auto it = exp.begin() + 1; it != exp.end(); ++it) {
-      err += ", " + *it;
-    }
-    err += ".\n";
-    fmt::printf("%s", err);
+    _eoferror(s.top());
   }
 
   return ruleNums;
@@ -104,5 +88,33 @@ void parser::vis(std::list<size_t> lst) {
     }
     fmt::printf("\n");
   }
+}
+
+void parser::_gerror(grammar::lexem l, token t) {
+  auto expected = _gramm.expected(l._val);
+  std::string err =
+      fmt::sprintf("Unexpected word %s at %ld:%ld. Expected %s", t._val,
+                   t._info._lineNum, t._info._linePos, expected[0]);
+  for (auto it = expected.begin() + 1; it != expected.end(); ++it) {
+    err += ", " + *it;
+  }
+  err += ".\n";
+  fmt::printf("%s", err);
+}
+
+void parser::_eoferror(grammar::lexem l) {
+  auto expected = _gramm.expected(l._val);
+  std::string err =
+      fmt::sprintf("Unexpected end of file. Expected %s", expected[0]);
+  for (auto it = expected.begin() + 1; it != expected.end(); ++it) {
+    err += ", " + *it;
+  }
+  err += ".\n";
+  fmt::printf("%s", err);
+}
+
+void parser::_serror(grammar::lexem l, token t) {
+  fmt::printf("Unexpected word %s at %ld:%ld. Expected %s.\n", t._val,
+              t._info._lineNum, t._info._linePos, l._val);
 }
 }
