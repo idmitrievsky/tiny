@@ -14,16 +14,16 @@
 #include <streambuf>
 
 namespace tiny {
-grammar::grammar(std::string grammarPath, std::string tablePath) {
-  std::fstream jsonInput;
-  jsonInput.open(grammarPath);
+grammar::grammar(std::string pathToGrammar, std::string pathToParseTable) {
+  std::fstream stream;
+  stream.open(pathToGrammar);
 
-  std::string err, jsonText((std::istreambuf_iterator<char>(jsonInput)),
-                            std::istreambuf_iterator<char>());
-  json11::Json gramm = json11::Json::parse(jsonText, err);
+  std::string err, doc((std::istreambuf_iterator<char>(stream)),
+                       std::istreambuf_iterator<char>());
+  json11::Json grammDesc = json11::Json::parse(doc, err);
 
-  if (gramm.is_array()) {
-    for (auto rule : gramm.array_items()) {
+  if (grammDesc.is_array()) {
+    for (auto rule : grammDesc.array_items()) {
       if (rule.is_object()) {
         for (auto obj : rule.object_items()) {
           _rules.push_back({mnt(obj.first), {}});
@@ -46,19 +46,19 @@ grammar::grammar(std::string grammarPath, std::string tablePath) {
     }
   }
 
-  jsonInput.close();
-  jsonInput.open(tablePath);
-  jsonText = std::string((std::istreambuf_iterator<char>(jsonInput)),
-                         std::istreambuf_iterator<char>());
-  json11::Json table = json11::Json::parse(jsonText, err);
+  stream.close();
+  stream.open(pathToParseTable);
+  doc = std::string((std::istreambuf_iterator<char>(stream)),
+                    std::istreambuf_iterator<char>());
+  json11::Json tableDesc = json11::Json::parse(doc, err);
 
-  if (table.is_object()) {
-    for (auto pair : table.object_items()) {
-      if (pair.second.is_array()) {
-        for (auto a : pair.second.array_items()) {
-          for (auto ruleMap : a.object_items()) {
+  if (tableDesc.is_object()) {
+    for (auto pairs : tableDesc.object_items()) {
+      if (pairs.second.is_array()) {
+        for (auto pair : pairs.second.array_items()) {
+          for (auto ruleMap : pair.object_items()) {
             _predicts.insert(
-                {{pair.first, ruleMap.first}, ruleMap.second.int_value() - 1});
+                {{pairs.first, ruleMap.first}, ruleMap.second.int_value() - 1});
           }
         }
       }

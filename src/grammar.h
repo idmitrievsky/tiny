@@ -25,7 +25,7 @@ public:
     }
   };
 
-  grammar(std::string grammarPath, std::string tablePath);
+  grammar(std::string pathToGrammar, std::string pathToParseTable);
   std::pair<lexem, std::vector<lexem>> rule(size_t num);
   size_t predict(std::string l, token t, bool &found);
   std::vector<std::string> expected(std::string l);
